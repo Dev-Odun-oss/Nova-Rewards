@@ -1,17 +1,22 @@
 const appEvents = require('./eventEmitter');
 const { sendRedemptionConfirmation } = require('./emailService');
+const { emitBalanceUpdate } = require('./socketService');
 
 /**
  * Registers the listener that sends a redemption confirmation email
- * whenever a 'redemption.created' event is emitted.
+ * and pushes a real-time balance_update whenever a 'redemption.created' event fires.
  *
  * Called once at server startup (server.js).
- * Fire-and-forget: email failures are logged but never bubble up to the caller.
+ * Fire-and-forget: failures are logged but never bubble up to the caller.
  */
 function registerRedemptionEventListener() {
   appEvents.on('redemption.created', async ({ redemption, user, reward }) => {
-    // Only attempt email if the user has an email address on file
-    const recipientEmail = user.email;
+    // Push real-time balance update to the user's socket room
+    if (user?.id !== undefined && redemption?.new_balance !== undefined) {
+      emitBalanceUpdate(user.id, { balance: redemption.new_balance });
+    }
+
+    const recipientEmail = user?.email;
     if (!recipientEmail) return;
 
     try {
@@ -23,7 +28,6 @@ function registerRedemptionEventListener() {
         redemptionId: redemption.id,
       });
     } catch (err) {
-      // Email failures must never affect the redemption response
       console.error('[redemptionEventListener] email send failed:', err.message);
     }
   });

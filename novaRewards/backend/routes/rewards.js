@@ -9,6 +9,8 @@ const { distributeRewards } = require('../../blockchain/sendRewards');
 const { isValidStellarAddress } = require('../../blockchain/stellarService');
 const { authenticateMerchant } = require('../middleware/authenticateMerchant');
 const { verifyTrustline } = require('../../blockchain/trustline');
+const { emitBalanceUpdate, emitNotification } = require('../services/socketService');
+const { getUserByWallet } = require('../db/userRepository');
 
 /**
  * Rate limiter: max 20 requests per minute per IP on the distribute endpoint.
@@ -149,6 +151,17 @@ router.post('/distribute', distributeRateLimiter, authenticateMerchant, async (r
     });
 
     res.json({ success: true, txHash: result.txHash, transaction: result.tx });
+
+    // Push real-time balance update and notification (fire-and-forget)
+    getUserByWallet(recipientWallet).then((user) => {
+      if (!user) return;
+      emitBalanceUpdate(user.id, { balance: result.newBalance ?? null });
+      emitNotification(user.id, {
+        type: 'reward',
+        message: `You received ${amount} NOVA tokens!`,
+        createdAt: new Date().toISOString(),
+      });
+    }).catch(() => {});
   } catch (err) {
     if (err.code === 'no_trustline') {
       return res.status(400).json({

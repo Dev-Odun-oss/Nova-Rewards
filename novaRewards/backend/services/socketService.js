@@ -50,8 +50,18 @@ function emitNotification(userId, notification) {
   io.to(`user:${userId}`).emit('notification', notification);
 }
 
+/**
+ * Emit a real-time balance update to a specific user.
+ * @param {number|string} userId
+ * @param {{ balance: number }} payload
+ */
+function emitBalanceUpdate(userId, payload) {
+  if (!io) return;
+  io.to(`user:${userId}`).emit('balance_update', payload);
+}
+
 function getIO() {
   return io;
 }
 
-module.exports = { initSocketIO, emitNotification, getIO };
+module.exports = { initSocketIO, emitNotification, emitBalanceUpdate, getIO };

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import NotificationCenter from './NotificationCenter';
+import ConnectionStatus from './ConnectionStatus';
 
 /**
  * Dashboard layout with collapsible sidebar and header
@@ -156,6 +157,9 @@ export default function DashboardLayout({ children }) {
           </div>
 
           <div className="header-right">
+            {/* Connection status */}
+            <ConnectionStatus />
+
             {/* Theme toggle */}
             <ThemeToggle />
 

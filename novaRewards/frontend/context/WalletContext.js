@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { connectWallet as connectFreighter, isFreighterInstalled } from '../lib/freighter';
 import { getNOVABalance, getTransactionHistory } from '../lib/horizonClient';
+import { useSocketContext } from './SocketContext';
 
 const WalletContext = createContext(null);
 
@@ -42,6 +43,8 @@ export function WalletProvider({ children }) {
   const [error, setError] = useState(null);
   const [hydrated, setHydrated] = useState(false);
 
+  const { on } = useSocketContext();
+
   // Hydrate from localStorage on mount
   useEffect(() => {
     const storedKey = localStorage.getItem('walletPublicKey');
@@ -72,6 +75,14 @@ export function WalletProvider({ children }) {
       setError(err.message || 'Failed to refresh balance.');
     }
   }, [publicKey]);
+
+  // Real-time balance updates via socket
+  useEffect(() => {
+    const off = on('balance_update', ({ balance: newBalance }) => {
+      if (newBalance !== undefined) setBalance(String(newBalance));
+    });
+    return off;
+  }, [on]);
 
   const connect = useCallback(async (type = 'freighter') => {
     setLoading(true);
